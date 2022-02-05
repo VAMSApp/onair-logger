@@ -1,0 +1,25 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model World {
+  Id                    Int       @id @default(autoincrement())
+  Uuid                  String    @unique
+  Name                  String
+  IsSurvival            Boolean   @default(false)
+  IsHumanOnly           Boolean   @default(false)
+  // Fuel100LLBasePrice    Int
+  // FuelJetBasePrice      Int
+  // JobsBaseBonus         Int
+  // JobsMaxBonus          Int
+  ShortName             String
+  EnableEconomicBalance Boolean   @default(false)
+}
