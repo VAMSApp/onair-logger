@@ -51,6 +51,7 @@ const companyRepo = require('./lib/repos/company');
             })
             .catch(function errorProcessingCompany(err) {
                 console.error('Error processing company');
+                console.error(err);
             });
     }
 
