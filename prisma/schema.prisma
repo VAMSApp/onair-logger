@@ -22,4 +22,46 @@ model World {
   // JobsMaxBonus          Int
   ShortName             String
   EnableEconomicBalance Boolean   @default(false)
+  Companies Company[]
+}
+
+model Company {
+  Id                                 Int        @id @default(autoincrement())
+  Uuid                               String     @unique
+  WorldUuId                          String
+  WorldId                            Int
+  Name                               String
+  AirlineCode                        String
+  Reputation                         Float?
+  Level                              Int?
+  CheckrideLevel                     Int?
+  LastConnection                     String?
+  LastReportDate                     String?
+  CreationDate                       String?
+  DifficultyLevel                    Int?
+  UTCOffsetinHours                   Int?
+  Paused                             Boolean?    @default(false)
+  PausedDate                         String?
+  LevelXP                            Int?
+  TransportEmployeeInstant           Boolean?    @default(false)
+  TransportPlayerInstant             Boolean?    @default(false)
+  ForceTimeInSimulator               Boolean?    @default(false)
+  UseSmallAirports                   Boolean?    @default(false)
+  UseOnlyVanillaAirports             Boolean?    @default(false)
+  EnableSkillTree                    Boolean?    @default(false)
+  EnableLandingPenalities            Boolean?    @default(false)
+  EnableEmployeesFlightDutyAndSleep  Boolean?    @default(false)
+  AircraftRentLevel                  Int?
+  EnableCargosAndChartersLoadingTime Boolean?    @default(false)
+  InSurvival                         Boolean?    @default(false)
+  PayBonusFactor                     Float?
+  EnableSimFailures                  Boolean?    @default(false)
+  DisableSeatsConfigCheck            Boolean?    @default(false)
+  RealisticSimProcedures             Boolean?    @default(false)
+  TravelTokens                       Int?
+  CurrentBadgeId                     String?
+  CurrentBadgeUrl                    String?
+  CurrentBadgeName                   String?
+  LastWeeklyManagementsPaymentDate   String?
+  World                              World      @relation(fields: [WorldId], references: [Id])
 }
