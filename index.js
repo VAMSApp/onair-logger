@@ -2,6 +2,7 @@ require('dotenv/config');
 const { OnAirApi } = require('onair-api');
 const worldRepo = require('./lib/repos/world');
 const companyRepo = require('./lib/repos/company');
+const aircraftRepo = require('./lib/repos/aircraft');
 
 (async function main() {
     const apiConfig = {
@@ -11,6 +12,10 @@ const companyRepo = require('./lib/repos/company');
     };
 
     const Api = new OnAirApi(apiConfig);
+
+    let Company = null;
+    let World = null;
+    let Fleet = [];
 
     async function refreshCompanyDetails() {
         console.log(`Started refreshCompanyDetails`);
@@ -23,34 +28,33 @@ const companyRepo = require('./lib/repos/company');
                 console.log(`  Started Processing ${AirlineCode} Company`);
                 console.log(`    Looking up world by World ID: ${WorldId}`);
 
-                const world = await worldRepo.findByUuid(WorldId);
+                World = await worldRepo.findByUuid(WorldId);
 
-                if (world) {
-                    console.log(`    World found: ${world.ShortName}`);
+                if (World) {
+                    console.log(`    World found: ${World.ShortName}`);
                 }
 
                 console.log(`    Trying to find the Company in the database by the provided Company UUID: ${Id}`);
-                let company = await companyRepo.findByUuid(Id);
+                Company = await companyRepo.findByUuid(Id);
 
-                if (company) {
-                    console.log(`    Company UUID ${company.Uuid} found in database.`);
+                if (Company) {
+                    console.log(`    Company UUID ${Company.Uuid} found in database.`);
 
-                    console.log(`    Refreshing ${company.AirlineCode} (${company.Id}) with the latest data.`);
-                    company = await companyRepo.update(company.Id, onair_company);
+                    console.log(`    Refreshing ${Company.AirlineCode} (${Company.Id}) with the latest data.`);
+                    Company = await companyRepo.update(Company.Id, onair_company);
 
                 } else {
                     console.log(`    Company UUID ${Id} was not found in the database.`);
 
                     console.log('    Creating the new Company');
-                    company = await companyRepo.create(onair_company);
+                    Company = await companyRepo.create(onair_company);
 
-                    console.log(`    Company ${company?.AirlineCode} created. Company ID is ${company?.Id}.`);
+                    console.log(`    Company ${Company?.AirlineCode} created. Company ID is ${Company?.Id}.`);
                 }
 
-                console.log(`  Finished Processing Company (${company.Id}) ${AirlineCode}.`);
+                console.log(`  Finished Processing Company (${Company.Id}) ${AirlineCode}.`);
 
-
-                return company;
+                return Company;
             })
             .then(() => {
                 console.log('Finished refreshCompanyDetails()');
@@ -66,34 +70,68 @@ const companyRepo = require('./lib/repos/company');
     async function refreshCompanyFleet() {
         console.log(`Started refreshCompanyFleet`);
 
-        let Created = [];
-        let Updated = [];
-
         return Api
             .getCompanyFleet()
             .then(async function processCompanyFleet(onair_fleet) {
-                onair_fleet.forEach(async function eachAircraft (oa_aircraft) {
+                let Updated = [];
+                let Created = [];
+                let updatedCount = 0;
+                let createdCount = 0;
+                let TotalCount = onair_fleet.length;
 
-                    const {
-                        Id,
-                        AircraftTypeId,
-                        AircraftClassId,
-                        Identifier,
-                    } = oa_aircraft;
+                console.log(`  Received ${TotalCount} aircraft, Looping through each`);
+
+                onair_fleet.forEach(async function eachAircraft (oa_aircraft) {
+                    console.log(`    Looking up Aircraft by UUid '${oa_aircraft.Id}'`);
+
+                    const translated = {
+                        Uuid: oa_aircraft.Id,
+                        CompanyUuid: Company.CompanyUuid,
+                        CompanyId: Company.Id,
+                        WorldUuId: World.Uuid,
+                        WorldId: World.Id,
+                        Identifier: oa_aircraft.Identifier,
+                    }
+
+                    console.log(`    Trying to find ${translated.Identifier} in the database.`);
 
                     // try to find the aircraft by Uuid in the database
+                    let aircraft = await aircraftRepo.findByUuid(translated.Uuid);
 
                     // if aircraft exists
+                    if (aircraft) {
+                        console.log(`    Aircraft ${aircraft.Uuid} found in database.`);
                         // update it
-                        // push the aircraft Id into the Updated array
-                    // otherwise
-                        // create it
-                        // push the aircraft Id into the Created array
+                        console.log(`    Refreshing ${aircraft.Identifier} (${aircraft.Id} aircraft with latest data`);
 
+                        aircraft = await aircraftRepo.update(aircraft.Id, translated);
+                        // push the aircraft Id into the Updated array
+                        Updated.push(aircraft);
+                        console.log(updatedCount);
+                        updatedCount = updatedCount++;
+
+                    // otherwise
+                    } else {
+                        console.log(`Aircraft UUID ${translated.Uuid} was not found in the database.`)
+                        // create it
+                        console.log(`Creating the new Aircraft`);
+                        aircraft = await aircraftRepo.create(translated);
+
+                        console.log(`Aircraft ${aircraft.Identifier} created, Aircraft ID is ${aircraft.Id}`);
+                        // push the aircraft Id into the Created array
+                        Created.push(aircraft);
+                        createdCount = createdCount++;
+                    }
                 });
 
+                return {
+                    updatedCount,
+                    Updated,
+                    createdCount,
+                    Created,
+                }
             })
-            .then(() => {
+            .then(({ Updated, updatedCount, Created, createdCount, }) => {
                 console.log('Finished refreshCompanyFleet()');
                 console.log();
             })
